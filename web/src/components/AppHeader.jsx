@@ -58,7 +58,7 @@ function AppHeader() {
         >
           <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', px: 0 }}>
             <Link to="/" style={{paddingTop: "5px"}}>
-              <img src="/assets/images/chainfolio_logo.png"  style={{height: "35px"}} />
+              <img src="/assets/images/logo.png"  style={{height: "35px"}} />
             </Link>
           </Box>
           <Box

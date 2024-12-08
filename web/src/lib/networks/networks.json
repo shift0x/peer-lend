@@ -1,0 +1,61 @@
+[
+    {
+        "default": true,
+        "name": "sepolia",
+        "chainId": 11155111,
+        "icon": "https://assets.coingecko.com/coins/images/279/standard/ethereum.png",
+        "explorer": "https://sepolia.etherscan.io",
+        "tokens": [
+            {
+                "address": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+                "name": "USDC",
+                "symbol": "USDC",
+                "decimals": 6,
+                "image": "https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694"
+            },
+            {
+                "address": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+                "name": "Wrapped Ether",
+                "symbol": "WETH",
+                "decimals": 18,
+                "image": "https://assets.coingecko.com/coins/images/279/standard/ethereum.png"
+            },
+            {
+                "address": "0x779877a7b0d9e8603169ddbd7836e478b4624789",
+                "name": "ChainLink",
+                "symbol": "LINK",
+                "decimals": 18,
+                "image": "https://assets.coingecko.com/coins/images/877/standard/chainlink-new-logo.png?1696502009"
+            },
+            {
+                "address": "0xff34b3d4aee8ddcd6f9afffb6fe49bd371b8a357",
+                "name": "DAI",
+                "symbol": "DAI",
+                "decimals": 18,
+                "image": "https://assets.coingecko.com/coins/images/9956/standard/Badge_Dai.png?1696509996"
+            }
+        ],
+        "exchanges": [
+            {
+                "name": "Uniswap V3",
+                "type": "uniswap-v3",
+                "pools": [
+                    "0xdd7cc9a0da070fb8b60dc6680b596133fb4a7100",
+                    "0x1c9d93e574be622821398e3fe677e3a279f256f7",
+                    "0x3289680dd4d6c10bb19b899729cda5eef58aeff1",
+                    "0x1f358bd2b4EA422F7a75b9E20DEb32f4723E8aAB"
+                ],
+                "params": {
+                    "router": "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E",
+                    "factory": "0x0227628f3F023bb0B980b67D528571c95c6DaC1c",
+                    "positionManager": "0x1238536071E1c677A632429e3655c799b22cDA52"
+                }
+            }
+        ],
+        "native": {
+            "symbol": "eth",
+            "decimals": 18,
+            "icon": "https://assets.coingecko.com/coins/images/279/standard/ethereum.png"
+        }
+    }  
+]

@@ -9,13 +9,13 @@ const defaultFloatingActionButtonStyle = {
     },
 }
 
-export default function DepositActionButton({variant="extended", size="medium", sx={}, ...props}) {
+export default function BorrowActionButton({variant="extended", size="medium", sx={}, ...props}) {
     return (
         <StyledFab variant={variant} size={size} sx={{
                 ...defaultFloatingActionButtonStyle,
                 ...sx
             }} {...props}>
-            <AccountBalanceIcon sx={{ fontSize: '17px'}} /> &nbsp; Deposit
+            <AccountBalanceIcon sx={{ fontSize: '17px'}} /> &nbsp; New Loan Request
         </StyledFab>
     )
 }

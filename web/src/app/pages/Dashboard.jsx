@@ -3,11 +3,18 @@ import { Box, Button, Grid, Dialog, Typography, DialogTitle } from '@mui/materia
 import { useState } from 'react';
 import { useConnectionStatus } from '@thirdweb-dev/react';
 import Web3WalletConnection from '../../features/web3-wallet-connection/Web3WalletConnection';
+import OutstandinBorrows from '../../features/borrow/OutstandingBorrows';
+import LendAction from '../../features/lend/LendAction';
+import TradeAction from '../../features/trade/TradeAction';
+import BorrowActionButton from '../../components/BrrowActionButton';
+import BorrowAction from '../../features/borrow/BorrowAction';
+import { useNetworks } from '../../providers/NetworksProvider';
 
 
 const headings = [
     { id: "borrow", name: "Borrow" },
     { id: "lend", name: "Lend" },
+    { id: "trade", name: "Trade" }
 ]
 
 const headingStyle = (selected) => {
@@ -41,6 +48,7 @@ export default function DashboardPage(){
     const [ selectedHeading, setSelectedHeading] = useState("borrow")
     const [ isModalActive, setIsModalActive] = useState(false);
     const [ activeModalContent, setActiveModalContent] = useState(null);
+    const { defaultNetwork } = useNetworks()
 
     
     const connectionStatus = useConnectionStatus();
@@ -57,6 +65,8 @@ export default function DashboardPage(){
 
     function getActiveModal(){
         switch(activeModalContent.content) {
+            case "borrow":
+                return <BorrowAction network={defaultNetwork} />
             default:
                 return null;
         }
@@ -68,6 +78,12 @@ export default function DashboardPage(){
             return requiredActionContainer(<Web3WalletConnection active={true} />);
 
         switch(selectedHeading){
+            case "borrow":
+                return <OutstandinBorrows />
+            case "lend":
+                return <LendAction />
+            case "trade":
+                return <TradeAction />
             default:
                 return requiredActionContainer(
                     <Typography sx={{textTransform: "uppercase", color: "#666", fontWeight: "bold"}}>...Coming Soon...</Typography>
@@ -99,7 +115,8 @@ export default function DashboardPage(){
                         textAlign: "right"
                     }}>
                         
-                        buttons
+                        <BorrowActionButton 
+                            onClick={() => { renderModalContent("borrow") }} />
                     </Box>
                 
                 }

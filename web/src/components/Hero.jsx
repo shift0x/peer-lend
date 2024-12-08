@@ -44,7 +44,7 @@ export default function Hero() {
                 lineHeight: 1.6
             }}
           >
-            Borrow / lend using on-chain credit and reputation with transparent market driven interest rates. <br /> Powered by Request Network.
+            borrow & lend using on-chain credit and reputation with transparent market driven interest rates. <br /> Powered by Request Network.
           </Typography>
         </Stack>
       </Container>

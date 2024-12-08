@@ -1,13 +1,16 @@
 import { TransactionQueueProvider} from '../providers/TransactionQueueProvider';
+import { NetworksProvider } from './NetworksProvider';
 import { SendTransactionProvider } from './SendTransactionProvider';
 
 const ApplicationProviders = ({children}) => {
     return (
-        <SendTransactionProvider>
-            <TransactionQueueProvider>
-                { children }
-            </TransactionQueueProvider>
-        </SendTransactionProvider>
+        <NetworksProvider>
+            <SendTransactionProvider>
+                <TransactionQueueProvider>
+                    { children }
+                </TransactionQueueProvider>
+            </SendTransactionProvider>
+        </NetworksProvider>
     )
 }
 

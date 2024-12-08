@@ -21,7 +21,7 @@ const defaultContainerStyle = {
 }
 
 
-export default function AmountInput({ caption="Amount", checkForInsuffientInput=true, balances, asset, network, onAmountInChanged, containerSx = {}, inputSx = {} }){
+export default function AmountInput({ caption="Amount", checkForInsuffientInput=true, displayBalances=true, balances={}, asset, network, onAmountInChanged, containerSx = {}, inputSx = {}, value, readonly=false, minimumValue, defaultValue }){
     const [selectedAssetBalance, setSelectedAssetBalance] = useState(0);
     const [inputAmountIn, setInputAmountIn] = useState("");
     const [amountInError, setAmountInError] = useState(null);
@@ -41,20 +41,24 @@ export default function AmountInput({ caption="Amount", checkForInsuffientInput=
 
     useEffect(() => {
         setAccountMaximumInput();
-        setAmount(0)
+        setAmount(defaultValue ?? 0)
     }, [asset, network])
 
     function setAmount(amount){
+        if(!onAmountInChanged)
+            return 
         setInputAmountIn(amount);
 
         let error = null;
 
         if(isNaN(amount)){
-            error = "invalid input amount";
+            error = "invalid value";
         } else if(amount > selectedAssetBalance && checkForInsuffientInput){
             error = "amount exceeds balance";
         } else if(amount < 0){
-            error = "amount must be > 0"
+            error = "value must be > 0"
+        } else if(minimumValue && amount < minimumValue){
+            error = `value must be > ${minimumValue}`
         }
         
         if(error || amount == 0){
@@ -63,6 +67,7 @@ export default function AmountInput({ caption="Amount", checkForInsuffientInput=
             onAmountInChanged(amount);
         }
 
+        
         setAmountInError(error);
     }
 
@@ -75,8 +80,9 @@ export default function AmountInput({ caption="Amount", checkForInsuffientInput=
 
             <StyledInput error={amountInError != null} 
                 sx={inputSx} 
-                value={inputAmountIn} 
-                onChange={ (e) => setAmount(e.target.value) } />
+                value={value ?? inputAmountIn} 
+                
+                onChange={ (e) => {  if(!readonly) setAmount(e.target.value)}  }  />
 
 
             <Stack direction="row" sx={{ 
@@ -88,11 +94,14 @@ export default function AmountInput({ caption="Amount", checkForInsuffientInput=
                 <StyledCaption 
                     sx={accountBalanceStyle}>
                         {
-                            selectedAssetBalance.toString() == "" ? 
-                                <Skeleton width={100} /> :
-                                <>
-                                    Balance:&nbsp;{ formatNumber(selectedAssetBalance) }
-                                </>
+                            displayBalances ?
+                                selectedAssetBalance.toString() == "" ? 
+                                    <Skeleton width={100} /> :
+                                    <>
+                                        Balance:&nbsp;{ formatNumber(selectedAssetBalance) }
+                                    </>
+                                :
+                                null
                         }
                         
                 </StyledCaption>
@@ -101,11 +110,14 @@ export default function AmountInput({ caption="Amount", checkForInsuffientInput=
                     sx={maxAmountInStyle} 
                     onClick={ () => { setAmount(selectedAssetBalance)}}>
                         {
-                            selectedAssetBalance.toString() == "" ?
-                                <Skeleton width={20} /> :
-                                <>
-                                    &nbsp;(max)
-                                </>
+                            displayBalances ?
+                                selectedAssetBalance.toString() == "" ?
+                                    <Skeleton width={20} /> :
+                                    <>
+                                        &nbsp;(max)
+                                    </>
+                                :
+                                null
                         }
                         
                 </StyledCaption>

@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 struct LoanMetadata {
     uint256 id;
     address payor;
+    address payee;
     string headline;
     string description;
     address token;
@@ -19,6 +20,8 @@ struct LoanState {
     uint256 discoverPeriodEndsAtTimestamp;
     uint256 amountRemaining;
     LoanStatus status;
+    uint256 lastRepaymentTokenBalance;
+    uint256 lastFundedInterestRate;
 }
 
 struct Lender {
@@ -40,5 +43,6 @@ enum LoanStatus {
     Funding,
     Finalized,
     Released,
-    Repaid
+    Repaid,
+    Closed
 }

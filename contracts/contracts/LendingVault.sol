@@ -5,29 +5,23 @@ import {LoanMetadata} from './Types.sol';
 import {ILoanPool} from './Interfaces.sol';
 import {LendingPool} from './LendingPool.sol';
 
+import 'hardhat/console.sol';
+
 contract LendingVault {
 
     /// @notice mapping of payees to loan pool ids
-    mapping(address => uint256[]) private _loanPoolsByPayor;
+    mapping(address => uint256[]) private loanPoolsByPayor;
 
     /// @notice list of all loan pools in the system
-    address[] private _loanPools;
+    LoanMetadata[] public allLoans;
 
 
     /**
-     * @notice get all the loans in the system
-     * @return loans the unfiltred loans
+     * @notice get all the loan pools
+     * @return the loan pools
      */
-    function getLoans() public view returns (LoanMetadata[] memory loans) {
-        address[] memory loanPools = _loanPools;
-
-        loans = new LoanMetadata[](loanPools.length);
-
-        for(uint256 i = 0; i < loanPools.length; i++){
-            loans[i] = ILoanPool(loanPools[i]).metadata();
-        }
-        
-        return loans;
+    function getLoans() public view returns (LoanMetadata[] memory) {
+        return allLoans;
     }
 
     /**
@@ -38,15 +32,14 @@ contract LendingVault {
     function getLoansByPayor(
         address payor
     ) public view returns (LoanMetadata[] memory loans) {
-        uint256 length = _loanPoolsByPayor[payor].length;
+        uint256 length = loanPoolsByPayor[payor].length;
         
         loans = new LoanMetadata[](length);
 
         for(uint256 i = 0; i < length; i++){
-            uint256 poolId = _loanPoolsByPayor[payor][i];
-            address pool = _loanPools[poolId];
-
-            loans[i] = ILoanPool(pool).metadata();
+            uint256 poolId = loanPoolsByPayor[payor][i];
+            
+            loans[i] = allLoans[poolId];
         }
 
         return loans;
@@ -73,9 +66,20 @@ contract LendingVault {
         uint256 interestRateMin,
         uint256 interestRateMax
     ) external {
+        LendingPool pool = new LendingPool(
+            allLoans.length,
+            loanAmount,
+            interestRateMin,
+            interestRateMax,
+            token,
+            msg.sender,
+            loanPeriod
+        );
+
         LoanMetadata memory metadata = LoanMetadata({
-            id: _loanPools.length,
+            id: allLoans.length,
             payor: msg.sender,
+            payee: address(pool),
             headline: headline,
             description: description,
             token: token,
@@ -86,10 +90,8 @@ contract LendingVault {
             timestamp: block.timestamp
         });
 
-        LendingPool pool = new LendingPool(metadata);
-
-        _loanPools.push(address(pool));
-        _loanPoolsByPayor[msg.sender].push(metadata.id);
+        allLoans.push(metadata);
+        loanPoolsByPayor[msg.sender].push(metadata.id);
 
     }
 }

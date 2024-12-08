@@ -11,6 +11,8 @@ import {LoanMetadata,
     LoanStatus
 } from './Types.sol';
 
+import 'hardhat/console.sol';
+
 contract LendingPool {
     using SafeERC20 for IERC20;
 
@@ -20,8 +22,23 @@ contract LendingPool {
     /// @notice the interest rate adjustment per second
     uint256 private immutable interestRateAdjustmentPerSecond;
 
-    /// @notice loan metadata
-    LoanMetadata public metadata;
+    /// @notice the loan id
+    uint256 public immutable LOAN_ID;
+
+    /// @notice the requested loan amount
+    uint256 public immutable REQUESTED_LOAN_AMOUNT;
+
+    /// @notice the opening interest rate
+    uint256 public immutable OPENING_INTEREST_RATE;
+
+    /// @notice the borrow token
+    address public immutable BORROW_TOKEN;
+
+    /// @notice the requestor of the loan
+    address public immutable LOAN_REQUESTOR;
+
+    /// @notice the loan period in days
+    uint256 public immutable LOAN_PERIOD_DAYS;
 
     /// @notice the current state of the loan
     LoanState public state;
@@ -29,20 +46,11 @@ contract LendingPool {
     /// @notice the finalized loan terms
     LoanTerms public terms;
 
-    /// @notice the last repayment token balance. Used to ensure proper accounting
-    uint256 _lastRepaymentTokenBalance;
-
-    /// @notice the interest rate as of the last funding
-    uint256 private _lastFundedInterestRate;
-
     /// @notice the lenders 
     mapping(address => Lender) public lenderInfo;
 
     /// @notice the loan funding amount is greater than the requested amount remaining
     error FundingAmountExceedsLoanAmount();
-
-    /// @notice the discovery period ended without the loan being funded
-    error FundingDiscoveryPeriodEnding();
 
     /// @notice signal that a loan has been funded
     event LoanFunded(uint256 indexed id, address indexed funder, uint256 amount);
@@ -63,17 +71,31 @@ contract LendingPool {
     event LenderClaimedFunds(uint256 indexed id, address indexed lender, uint256 amount);
 
     constructor(
-        LoanMetadata memory _metadata
+        uint256 id,
+        uint256 loanAmount,
+        uint256 interestRateMin,
+        uint256 interestRateMax,
+        address borrowToken,
+        address requestor,
+        uint256 loanPeriod
     ) {
-        metadata = _metadata;
+        LOAN_ID = id;
+        REQUESTED_LOAN_AMOUNT = loanAmount;
+        OPENING_INTEREST_RATE = interestRateMin;
+        BORROW_TOKEN = borrowToken;
+        LOAN_REQUESTOR = requestor;
+        LOAN_PERIOD_DAYS = loanPeriod;
+
         state = LoanState({
             createdAtTimestamp: block.timestamp,
-            amountRemaining: _metadata.loanAmount,
+            amountRemaining: loanAmount,
             discoverPeriodEndsAtTimestamp: block.timestamp + INTEREST_RATE_DISCOVERY_PERIOD_SECONDS,
-            status: LoanStatus.Funding
+            status: LoanStatus.Funding,
+            lastRepaymentTokenBalance: 0,
+            lastFundedInterestRate: interestRateMin
         });
 
-        uint256 interestRateDelta = metadata.interestRateMax - metadata.interestRateMin;
+        uint256 interestRateDelta = interestRateMax - interestRateMin;
 
         interestRateAdjustmentPerSecond = interestRateDelta / INTEREST_RATE_DISCOVERY_PERIOD_SECONDS;
     }
@@ -87,7 +109,7 @@ contract LendingPool {
     function getInterestRate() public view returns(uint256) {
         uint256 secondsElapsed = block.timestamp - state.createdAtTimestamp;
 
-        return metadata.interestRateMin + (secondsElapsed*interestRateAdjustmentPerSecond);
+        return OPENING_INTEREST_RATE + (secondsElapsed*interestRateAdjustmentPerSecond);
     }
 
     /**
@@ -104,12 +126,10 @@ contract LendingPool {
         // revert if the request fails sanity checks
         if(amount > _state.amountRemaining){
             revert FundingAmountExceedsLoanAmount();
-        } else if(block.timestamp > _state.discoverPeriodEndsAtTimestamp) {
-            revert FundingDiscoveryPeriodEnding();
-        }
+        } 
         
         // transfer the tokens
-        IERC20(metadata.token).safeTransferFrom(msg.sender, address(this), amount);
+        IERC20(BORROW_TOKEN).safeTransferFrom(msg.sender, address(this), amount);
 
         // update the lender record
         Lender memory lender = lenderInfo[msg.sender];
@@ -119,7 +139,11 @@ contract LendingPool {
 
         lenderInfo[msg.sender] = lender;
 
-        emit LoanFunded(metadata.id, msg.sender, amount);
+        // update the loan state
+        state.amountRemaining -= amount;
+        state.lastFundedInterestRate = getInterestRate();
+
+        emit LoanFunded(LOAN_ID, msg.sender, amount);
     }
 
     /**
@@ -128,18 +152,23 @@ contract LendingPool {
      */
     function finalizeLoanTerms() public {
         // ensure the caller is the intended receiver
-        require(msg.sender == metadata.payor, "unauthorized");
+        require(msg.sender == LOAN_REQUESTOR, "unauthorized");
 
-        // create loan terms from the final interest rate and loan params
-        LoanMetadata memory _metadata = metadata;
+        uint256 amountFunded = REQUESTED_LOAN_AMOUNT - state.amountRemaining;
 
-        uint256 principalAmount = IERC20(_metadata.token).balanceOf(address(this));
-        uint256 interestRate = _lastFundedInterestRate;
+        if(amountFunded == 0){
+            _setLoanStatus(LoanStatus.Closed);
+
+            return;
+        }
+
+        uint256 principalAmount = IERC20(BORROW_TOKEN).balanceOf(address(this));
+        uint256 interestRate = state.lastFundedInterestRate;
         uint256 oneYearInterestAmount = (principalAmount * interestRate) / 1e18;
-        uint256 interestAmount = (((_metadata.loanPeriod * 1e18) / 365) * oneYearInterestAmount) / 1e18;
+        uint256 interestAmount = (((LOAN_PERIOD_DAYS * 1e18) / 365) * oneYearInterestAmount) / 1e18;
 
         LoanTerms memory _terms = LoanTerms({
-            loanId: _metadata.id,
+            loanId: LOAN_ID,
             principalAmount: principalAmount,
             interestRate: interestRate,
             interestAmount: interestAmount,
@@ -155,7 +184,7 @@ contract LendingPool {
             _terms.interestRate, 
             _terms.interestAmount, 
             _terms.amountOwed,
-            _metadata.loanPeriod);
+            LOAN_PERIOD_DAYS);
 
         // update the loan status to finalized
         _setLoanStatus(LoanStatus.Finalized);
@@ -166,9 +195,7 @@ contract LendingPool {
      * @dev this call will revert if the loan is already released or the sender is not the receiver
      */
     function releaseFunds() public {
-        LoanMetadata memory _metadata = metadata;
-
-        require(msg.sender == _metadata.payor, "unauthorized");
+        require(msg.sender == LOAN_REQUESTOR, "unauthorized");
         require(state.status == LoanStatus.Finalized || state.status == LoanStatus.Funding, "invalid state for release of funds");
 
         // ensure the loan is finalized before releasing funds
@@ -177,23 +204,25 @@ contract LendingPool {
         }
 
         LoanTerms memory _terms = terms;
-        IERC20(_metadata.token).safeTransfer(_metadata.payor, terms.principalAmount);
+        IERC20(BORROW_TOKEN).safeTransfer(LOAN_REQUESTOR, terms.principalAmount);
 
-        emit LoanReleased(_metadata.id, _metadata.payor, _terms.principalAmount);
+        emit LoanReleased(LOAN_ID, LOAN_REQUESTOR, _terms.principalAmount);
 
         // update the loan status to released
         _setLoanStatus(LoanStatus.Released);
 
-        // set the last payment amount to 0
-        _lastRepaymentTokenBalance = IERC20(_metadata.token).balanceOf(address(this));
+        // update the repayment token balance
+        state.lastRepaymentTokenBalance = IERC20(BORROW_TOKEN).balanceOf(address(this));
     }
 
     /**
      * @notice accept a loan payment sent to the contract
      */
     function acceptPayment() public {
-        uint256 currentRepaymentTokenBalance = IERC20(metadata.token).balanceOf(address(this));
-        uint256 repaymentAmount = currentRepaymentTokenBalance - _lastRepaymentTokenBalance;
+        require(state.status == LoanStatus.Released, "loan cannot accept payments");
+
+        uint256 currentRepaymentTokenBalance = IERC20(BORROW_TOKEN).balanceOf(address(this));
+        uint256 repaymentAmount = currentRepaymentTokenBalance - state.lastRepaymentTokenBalance;
 
         terms.amountRepaid += repaymentAmount;
 
@@ -201,7 +230,7 @@ contract LendingPool {
             _setLoanStatus(LoanStatus.Repaid);
         }
 
-        _lastRepaymentTokenBalance = currentRepaymentTokenBalance;
+        state.lastRepaymentTokenBalance = currentRepaymentTokenBalance;
 
         emit LoadPaymentAccepted(terms.loanId, repaymentAmount);
     }
@@ -217,11 +246,17 @@ contract LendingPool {
 
         require(claimableAmount >= amount, "requested amount is greater than claimable amount");
 
-        lenderInfo[msg.sender].claimedAmount += amount;
+        // allow claiming of funds if the loan is still in the funding stage
+        if(state.status == LoanStatus.Funding){
+            lenderInfo[msg.sender].lendingAmount -= amount;
+            state.amountRemaining += amount;
+        } else {
+            lenderInfo[msg.sender].claimedAmount += amount;
+        }
 
-        IERC20(metadata.token).transfer(msg.sender, amount);
+        IERC20(BORROW_TOKEN).transfer(msg.sender, amount);
 
-        emit LenderClaimedFunds(metadata.id, msg.sender, amount);
+        emit LenderClaimedFunds(LOAN_ID, msg.sender, amount);
     }
 
     /**
@@ -234,6 +269,10 @@ contract LendingPool {
         address lender
     ) public view returns (uint256 amount) {
         Lender memory _lender = lenderInfo[lender];
+
+        if(state.status == LoanStatus.Funding){
+            return _lender.lendingAmount;
+        }
 
         if(_lender.lendingAmount == 0){ return 0; }
 

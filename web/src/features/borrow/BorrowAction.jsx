@@ -4,8 +4,8 @@ import SubmitTransactionButton from "../../components/SubmitTransactionButton";
 import { numberToBig } from "../../lib/chain/numbers";
 import AssetSelector from '../../components/AssetSelector';
 import AmountInput from "../../components/AmountInput";
-import { createNewBorrowRequest } from "./borrow";
 import CaptionedTextField from "../../components/CaptionedTextField";
+import { createNewBorrowRequest } from "../../lib/vault/vault";
 
 
 function BorrowAction({ onActionCompleted, network }){
@@ -18,23 +18,33 @@ function BorrowAction({ onActionCompleted, network }){
     const [maxInterestRate, setMaxInterestRate] = useState(null);
 
     const canSubmit = selectedAsset != null && loanAmount != null && interestRate != null && maxInterestRate != null && loanPeriod != null;
-
+    const interestRateSpread = .12;
 
     useMemo(() => {
         if(!interestRate)
             return
 
         const amount = Number(interestRate);
-        const max = `${(amount + 12).toFixed(2)}%`
+        const interestRateAdjustmentAmount = interestRateSpread*100;
+        const max = `${(amount + interestRateAdjustmentAmount).toFixed(2)}%`
 
         setMaxInterestRate(max);
     }, [interestRate])
 
     async function submitTransaction(signer){
         const amount = numberToBig(Number(loanAmount), selectedAsset.decimals);
-        const rate = numberToBig(Number(interestRate), 18);
-
-        return createNewBorrowRequest(signer, selectedAsset.address, amount, rate, headline, description);
+        const interestRateAsPercentage = Number(interestRate)/100;
+        const interestRateMin = numberToBig(interestRateAsPercentage, 18);
+        const interestRateMax = numberToBig(interestRateAsPercentage + interestRateSpread, 18);
+        
+        return createNewBorrowRequest(signer, 
+            headline, 
+            description,
+            selectedAsset.address,
+            amount,
+            interestRateMin,
+            interestRateMax,
+            loanPeriod);
     }
 
     return (

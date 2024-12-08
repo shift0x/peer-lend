@@ -9,6 +9,7 @@ import TradeAction from '../../features/trade/TradeAction';
 import BorrowActionButton from '../../components/BrrowActionButton';
 import BorrowAction from '../../features/borrow/BorrowAction';
 import { useNetworks } from '../../providers/NetworksProvider';
+import { useConnectedAddress } from '../../providers/ConnectedAddressProvider';
 
 
 const headings = [
@@ -48,9 +49,9 @@ export default function DashboardPage(){
     const [ selectedHeading, setSelectedHeading] = useState("borrow")
     const [ isModalActive, setIsModalActive] = useState(false);
     const [ activeModalContent, setActiveModalContent] = useState(null);
+
     const { defaultNetwork } = useNetworks()
 
-    
     const connectionStatus = useConnectionStatus();
 
     function renderModalContent(content, header, data){
@@ -58,20 +59,27 @@ export default function DashboardPage(){
         setIsModalActive(true)
     }
 
-
     function closeModal(){
         setIsModalActive(false)
+    }
+
+    function completedNewBorrow(){
+        closeModal()
     }
 
     function getActiveModal(){
         switch(activeModalContent.content) {
             case "borrow":
-                return <BorrowAction network={defaultNetwork} />
+                return <BorrowAction network={defaultNetwork} onActionCompleted={completedNewBorrow} />
             default:
                 return null;
         }
     }
     
+    function renderModalContent(content, header, data){
+        setActiveModalContent({ content, header, data });
+        setIsModalActive(true)
+    }
 
     function getContent(){
         if(connectionStatus != "connected")
@@ -79,7 +87,7 @@ export default function DashboardPage(){
 
         switch(selectedHeading){
             case "borrow":
-                return <OutstandinBorrows />
+                return <OutstandinBorrows renderModal={renderModalContent} />
             case "lend":
                 return <LendAction />
             case "trade":

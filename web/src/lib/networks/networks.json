@@ -1,6 +1,35 @@
 [
     {
         "default": true,
+        "name": "arbitrum",
+        "chainId": 42161,
+        "icon": "https://assets.coingecko.com/coins/images/279/standard/ethereum.png",
+        "explorer": "https://arbiscan.io",
+        "tokens":[
+            {
+                "address": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+                "name": "USDC",
+                "symbol": "USDC",
+                "decimals": 6,
+                "image": "https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694"
+            },
+            {
+                "address": "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1",
+                "name": "DAI",
+                "symbol": "DAI",
+                "decimals": 18,
+                "image": "https://assets.coingecko.com/coins/images/9956/standard/Badge_Dai.png?1696509996"
+            },
+            {
+                "address": "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+                "name":"Wrapped Ether",
+                "symbol": "ETH",
+                "decimals": 18,
+                "image": "https://assets.coingecko.com/coins/images/279/standard/ethereum.png"
+            }
+        ]
+    },
+    {
         "name": "sepolia",
         "chainId": 11155111,
         "icon": "https://assets.coingecko.com/coins/images/279/standard/ethereum.png",
